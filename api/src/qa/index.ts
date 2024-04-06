@@ -1,5 +1,4 @@
 import { SupabaseDatabase } from "database.js";
-import { ChatOpenAI } from "langchain/chat_models/openai";
 import { Document } from "langchain/document";
 import { ArxivPaperNote } from "notes/prompt.js";
 import {
@@ -9,13 +8,16 @@ import {
 } from "./prompt.js";
 import { formatDocumentsAsString } from "langchain/util/document";
 import { model } from "notes/index.js";
-import { getPaperFromLocalStorage, HNSWDatabase } from "hnsw-store.js";
+import { HNSWDatabase } from "hnsw-store.js";
 import path from "path";
 import { existsSync, readFileSync } from "fs";
-import { VectorStoreRetriever } from "langchain/vectorstores/base";
-import { HNSWLib } from "langchain/vectorstores/hnswlib";
-import { RunnablePassthrough, RunnableSequence } from "langchain/runnables";
+import { RunnableSequence } from "langchain/runnables";
 
+
+type QAResponse = Array<{
+  answer: string;
+  followupQuestions: string[];
+}>;
 
 /**
  * Asynchronous function for querying a model with a question, array of documents, and array of notes.
@@ -27,9 +29,9 @@ import { RunnablePassthrough, RunnableSequence } from "langchain/runnables";
  */
 async function qaModel(
   question: string,
-  documents: Array<Document>,
-  notes: Array<ArxivPaperNote>
-): Promise<Array<{ answer: string; followupQuestions: string[] }>> {
+  documents: Document[],
+  notes: ArxivPaperNote[],
+): Promise<QAResponse> {
   try {
     if (!documents) throw new Error("No documents found");
 
@@ -60,12 +62,21 @@ async function qaModel(
   }
 }
 
+/**
+ * Generates a Q&A response using a model with HNSW.
+ *
+ * @param {string} question - The question for which the answer is being generated.
+ * @param {Document[]} documents - The list of documents to consider for answering the question.
+ * @param {ArxivPaperNote[]} notes - The notes associated with the documents.
+ * @param {any} vectorStoreRetriever - The retriever for vector store.
+ * @return {Promise<QAResponse>} The promise that resolves to a Q&A response.
+ */
 async function qaModelWithHNSW({ question, documents, notes, vectorStoreRetriever, }: {
   question: string;
   documents: Document[];
   notes: ArxivPaperNote[];
   vectorStoreRetriever: any;
-}): Promise<Array<{ answer: string; followupQuestions: string[] }>> {
+}): Promise<QAResponse> {
   try {
     if (!documents || !notes || !vectorStoreRetriever) throw new Error("No documents found");
 
@@ -110,7 +121,7 @@ async function qaModelWithHNSW({ question, documents, notes, vectorStoreRetrieve
     });
   } catch (error) {
     console.log(error);
-    return [{ answer: "Error", followupQuestions: ["Error"] }] as { answer: string; followupQuestions: string[] }[];
+    return [{ answer: "Error", followupQuestions: ["Error"] }] as QAResponse;
   }
 }
 
@@ -168,9 +179,17 @@ export async function qaOnPaper(
 
 }
 
+
+/**
+ * Generate QA answers based on a given question and paper URL.
+ *
+ * @param {string} question - The question to generate answers for.
+ * @param {string} paperUrl - The URL of the paper.
+ * @return {Promise<QAResponse | null>} The generated QA answers.
+ */
 export async function qaOnPaperV2(
   question: string, paperUrl: string,
-) {
+): Promise<QAResponse | null> {
   // Check if vector store directory exists
   const vectorStoreDir = `vector_store/${path.basename(paperUrl)}`;
   if (!existsSync(vectorStoreDir)) throw new Error("No vector store directory found");
@@ -207,12 +226,6 @@ export async function qaOnPaperV2(
     const documents = await vectorStoreRetriever.getRelevantDocuments(question);
     console.log(`🤖 Fetched relevant documents: ${documents.length} documents`);
 
-    // Query model
-    // const answerAndQuestions = await qaModel(
-    //   question,
-    //   documents,
-    //   notes,
-    // );
     const answerAndQuestions = await qaModelWithHNSW({
       question,
       documents,

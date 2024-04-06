@@ -111,6 +111,8 @@ function main() {
    *     responses:
    *       200:
    *         description: Success response with the QA result and follow up questions.
+   *       500:
+   *         description: Error response
    */
   app.post("/qa", async (req, res) => {
     try {
