@@ -176,7 +176,7 @@ export async function qaOnPaperV2(
   if (!existsSync(vectorStoreDir)) throw new Error("No vector store directory found");
 
   // Retrieve notes from local storage
-  const storedPaper = `generated_notes/${path.basename(paperUrl)}/data.json`;
+  const storedPaper = `local_storage/${path.basename(paperUrl)}/data.json`;
   let retrievedPaper: any;
   if (
     existsSync(storedPaper) &&
@@ -223,7 +223,7 @@ export async function qaOnPaperV2(
     // save questions and answers
     if (answerAndQuestions[0].answer !== "Error") {
       database.saveQA(
-        `generated_notes/${path.basename(paperUrl)}/qa_data.json`,
+        `local_storage/${path.basename(paperUrl)}/qa_data.json`,
         question,
         answerAndQuestions[0].answer,
         formatDocumentsAsString(documents),

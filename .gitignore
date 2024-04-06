@@ -64,6 +64,6 @@ package-lock.json
 /lib/
 dist
 .turbo
-*/local_storage/*
-*/vector_store/*
+# */local_storage/*
+# */vector_store/*
 */generated_notes/*

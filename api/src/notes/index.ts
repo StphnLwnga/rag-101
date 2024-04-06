@@ -161,7 +161,7 @@ async function generateNotes(url: string, documents: Array<Document>): Promise<A
  * @return {void} This function does not return anything.
  */
 export function saveNotesLocally(paperUrl: string, notes: Array<ArxivPaperNote>): void {
-  const notesPath = `generated_notes/notes.json`;
+  const notesPath = `local_storage/notes.json`;
   let notesObj: { [key: string]: Array<ArxivPaperNote> } = {};
 
   if (fs.existsSync(notesPath)) {
@@ -278,7 +278,7 @@ export async function mainV2({ paperUrl, paperName, pagesToDelete }: MainProps):
   console.log({ isPdfUrl, isLocalPdf })
 
   // check if notes have been generated for the current paper
-  const notesPath = `generated_notes/${path.basename(paperUrl)}/data.json`;
+  const notesPath = `local_storage/${path.basename(paperUrl)}/data.json`;
   if (
     fs.existsSync(notesPath) &&
     Array.isArray(JSON.parse(fs.readFileSync(notesPath, "utf8"))) &&
@@ -334,7 +334,7 @@ export async function mainV2({ paperUrl, paperName, pagesToDelete }: MainProps):
     const notes = await generateNotes(paperUrl, documents);
 
     database.addPaper({
-      storagePath: `generated_notes/${path.basename(paperUrl)}/data.json`,
+      storagePath: `local_storage/${path.basename(paperUrl)}/data.json`,
       docs: formattedDocs,
       url: paperUrl,
       name: paperName,

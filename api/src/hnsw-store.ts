@@ -44,8 +44,8 @@ export class HNSWDatabase {
     docs: Document[];
     notes: ArxivPaperNote[];
   }) {
-    if (!existsSync(`generated_notes/${path.basename(url)}`))
-      fs.mkdirSync(`generated_notes/${path.basename(url)}`);
+    if (!existsSync(`local_storage/${path.basename(url)}`))
+      fs.mkdirSync(`local_storage/${path.basename(url)}`);
 
     return saveToLocalStorage(storagePath, docs, url, name, notes);
   }
@@ -191,7 +191,7 @@ export const saveQAToLocalStorage = ({
  * @return {any} The paper data if found in local storage, otherwise null.
  */
 export const getPaperFromLocalStorage = (url: string): any => {
-  const storagePath = `generated_notes/${path.basename(url)}/data.json`;
+  const storagePath = `local_storage/${path.basename(url)}/data.json`;
 
   if (
     existsSync(storagePath) &&
