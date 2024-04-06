@@ -1,26 +1,37 @@
-import { ChatPromptTemplate } from "langchain/prompts";
+import { ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate } from "langchain/prompts";
 import { BaseMessageChunk } from "langchain/schema";
-import { OpenAI as OpenAIClient } from "openai";
+
+export const SYSTEM_MESSAGE2 = `
+  Use the following pieces of context to answer the question at the end. 
+  If you don't know the answer, just say that you don't know, don't try to make up an answer.
+  ----------------
+  CONTEXT: Notes on the text: {notes}. Relevant parts of the text relating to the question: {relevantDocuments}
+  ----------------
+  QUESTION: {question}
+  ----------------
+  Helpful Answer:
+`;
+
+export const SYSTEM_MESSAGE = `
+  You are an expert of the topic the text is about. 
+  You are helping a student with their research.
+  The student has a question regarding the text they are reading.
+  Here are their notes on the text:
+  {notes}
+
+  And here are some relevant parts of the text relating to their question:
+  {relevantDocuments}
+
+  Answer the student's question in the context of the text. You should also provide suggested follow up questions.
+`;
 
 export const QA_OVER_PAPER_PROMPT = ChatPromptTemplate.fromMessages([
-  [
-    "ai",
-    `You are a tenured professor of computer science helping a student with their research.
-The student has a question regarding a paper they are reading.
-Here are their notes on the paper:
-{notes}
-
-And here are some relevant parts of the paper relating to their question
-{relevantDocuments}
-
-Answer the student's question in the context of the paper. You should also suggest followup questions.
-Take a deep breath, and think through your reply carefully, step by step.`,
-  ],
-  ["human", "Question: {question}"],
+  SystemMessagePromptTemplate.fromTemplate(SYSTEM_MESSAGE2),
+  HumanMessagePromptTemplate.fromTemplate(`Question: {question}`),
 ]);
 
-export const ANSWER_QUESTION_TOOL_SCHEMA: OpenAIClient.ChatCompletionTool = {
-  type: "function",
+export const ANSWER_QUESTION_TOOL_SCHEMA = {
+  type: "function" as const,
   function: {
     name: "questionAnswer",
     description: "The answer to the question",
@@ -35,7 +46,7 @@ export const ANSWER_QUESTION_TOOL_SCHEMA: OpenAIClient.ChatCompletionTool = {
           type: "array",
           items: {
             type: "string",
-            description: "Followup questions the student should also ask",
+            description: "Follow up questions the student should also ask",
           },
         },
       },
@@ -44,18 +55,31 @@ export const ANSWER_QUESTION_TOOL_SCHEMA: OpenAIClient.ChatCompletionTool = {
   },
 };
 
-export const answerOutputParser = (
-  output: BaseMessageChunk
-): Array<{ answer: string; followupQuestions: string[] }> => {
+/**
+ * Parses the output and returns an array of objects containing the answer and follow-up questions.
+ *
+ * @param {BaseMessageChunk} output - the output to be parsed
+ * @return {Array<{ answer: string; followupQuestions: string[] }>} the parsed response array
+ */
+export const answerOutputParser = (output: BaseMessageChunk): Array<{ answer: string; followupQuestions: string[] }> => {
   const toolCalls = output.additional_kwargs.tool_calls;
-  if (!toolCalls) {
-    throw new Error("Missing 'tool_calls' in notes output");
-  }
-  const response = toolCalls
-    .map((call) => {
-      const args = JSON.parse(call.function.arguments);
-      return args;
-    })
-    .flat();
-  return response;
+
+  if (!toolCalls) throw new Error("Missing 'tool_calls' in notes output");
+
+  return toolCalls.map(call => JSON.parse(call.function.arguments)).flat();
 };
+
+
+const aiMsg = [
+  "ai",
+  `You are an expert of the topic the text is about. 
+  You are helping a student with their research.
+  The student has a question regarding the text they are reading.
+  Here are their notes on the text:
+  {notes}
+
+  And here are some relevant parts of the text relating to their question:
+  {relevantDocuments}
+
+  Answer the student's question in the context of the text. You should also provide suggested follow up questions.`,
+]

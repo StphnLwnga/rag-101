@@ -9,7 +9,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Array<ArxivPaperNote> | undefined>
 ) {
-  const API_URL = "http://localhost:8080/take_notes";
+  const API_URL = "http://localhost:8080/take-notes";
   const data = await fetch(API_URL, {
     method: "POST",
     headers: {
